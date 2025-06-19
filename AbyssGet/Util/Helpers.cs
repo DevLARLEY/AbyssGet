@@ -49,7 +49,7 @@ public static class Helpers
         engine.Execute("var window = {addEventListener: function(name, func){func()}, atob: decodeCustomBase64};");
         engine.Execute("var top = {location: '.'}; var self = {};");
         engine.Execute("var getParameterByName = function(){return false;};");
-        engine.Execute("var document = {getElementById: function(){return false;}};");
+        engine.Execute("var document = {getElementById: function(){return false;}, toString: function(){return '[objectHTMLDocument]'}};");
         engine.Execute("var isUseExtension = false;");
         engine.Execute("var output = \"NO_RETURN\";");
         engine.Execute("window.SoTrym = function(name) {return {setup: function(config) {output = JSON.stringify(config);return this;}};};");
