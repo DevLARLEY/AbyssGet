@@ -44,7 +44,7 @@ public static class Helpers
 
         var engine = new Engine();
         engine.SetValue("atob", Atob); // doesn't break when compiling AOT
-        
+
         engine.Execute("function decodeCustomBase64(input){const defaultCharacterSet=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\";const customCharacterSet=\"RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/=\";let standardBase64=\"\";for(const ch of input){const index=customCharacterSet.indexOf(ch);if(index!==-1){standardBase64+=defaultCharacterSet[index]}}const decodedBytes=atob(standardBase64);try{return decodeURIComponent(escape(decodedBytes))}catch{return decodedBytes}}");
         engine.Execute("var window = {addEventListener: function(name, func){func()}, atob: decodeCustomBase64};");
         engine.Execute("var top = {location: '.'}; var self = {};");
@@ -54,7 +54,7 @@ public static class Helpers
         engine.Execute("var output = \"NO_RETURN\";");
         engine.Execute("window.SoTrym = function(name) {return {setup: function(config) {output = JSON.stringify(config);return this;}};};");
         engine.Execute(jsCode);
-        
+
         return engine.GetValue("output").AsString();
     }
 
