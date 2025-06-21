@@ -45,14 +45,80 @@ public static class Helpers
         var engine = new Engine();
         engine.SetValue("atob", Atob); // doesn't break when compiling AOT
 
-        engine.Execute("function decodeCustomBase64(input){const defaultCharacterSet=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\";const customCharacterSet=\"RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/=\";let standardBase64=\"\";for(const ch of input){const index=customCharacterSet.indexOf(ch);if(index!==-1){standardBase64+=defaultCharacterSet[index]}}const decodedBytes=atob(standardBase64);try{return decodeURIComponent(escape(decodedBytes))}catch{return decodedBytes}}");
+        engine.Execute(@"
+        function decodeCustomBase64(input) {
+          const defaultCharacterSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+          const customCharacterSet = 'RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/=';
+          
+          let standardBase64 = '';
+          for (const ch of input) {
+            const index = customCharacterSet.indexOf(ch);
+            if (index === -1) {
+              continue;
+            }
+            standardBase64 += defaultCharacterSet[index];
+          }
+          
+          const decodedBytes = atob(standardBase64);
+          try {
+            return decodeURIComponent(escape(decodedBytes));
+          } catch {
+            return decodedBytes;
+          }
+        }
+        ");
         engine.Execute("var window = {addEventListener: function(name, func){func()}, atob: decodeCustomBase64};");
         engine.Execute("var top = {location: '.'}; var self = {};");
         engine.Execute("var getParameterByName = function(){return false;};");
-        engine.Execute("var document = {getElementById: function(){return false;}, toString: function(){return '[objectHTMLDocument]'}};");
+        engine.Execute(@"
+            function HTMLElement() {
+              this._innerHTML = '';
+            }
+            HTMLElement.prototype.setAttribute = function() { return 'function'; };
+            HTMLElement.prototype.appendChild = function() { return 'function'; };
+            HTMLElement.prototype.style = undefined;
+
+            Object.defineProperty(HTMLElement.prototype, 'innerHTML', {
+              get: function() {
+                return this._innerHTML;
+              },
+              set: function(value) {
+                this._innerHTML = value;
+              },
+              configurable: true
+            });
+
+            Object.defineProperty(HTMLElement.prototype, 'outerHTML', {
+              get: function() {
+                return '<div>' + this._innerHTML + '</div>';
+              },
+              configurable: true
+            });
+
+            var document = {
+              createElement: function() {
+                return new HTMLElement();
+              },
+              getElementById: function() {
+                return false;
+              },
+              toString: function() {
+                return '[objectHTMLDocument]';
+              }
+            };
+        ");
         engine.Execute("var isUseExtension = false;");
-        engine.Execute("var output = \"NO_RETURN\";");
-        engine.Execute("window.SoTrym = function(name) {return {setup: function(config) {output = JSON.stringify(config);return this;}};};");
+        engine.Execute("var output = 'NO_RETURN';");
+        engine.Execute(@"
+        window.SoTrym = function(name) {
+          return {
+            setup: function(config) {
+              output = JSON.stringify(config);
+              return this;
+            }
+          };
+        };        
+        ");
         engine.Execute(jsCode);
 
         return engine.GetValue("output").AsString();
