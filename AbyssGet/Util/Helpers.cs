@@ -99,8 +99,8 @@ public static class Helpers
               createElement: function() {
                 return new HTMLElement();
               },
-              getElementById: function() {
-                return false;
+              getElementById: function(id) {
+                return id === 'overlay' ? false : true;
               },
               toString: function() {
                 return '[objectHTMLDocument]';
