@@ -7,11 +7,12 @@
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <InvariantGlobalization>true</InvariantGlobalization>
-        <Version>1.3.10</Version>
+        <Version>1.4.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Jint" Version="4.2.2" />
+      <PackageReference Include="PuppeteerSharp" Version="20.1.3" />
       <PackageReference Include="Spectre.Console" Version="0.50.0" />
       <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
       <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />

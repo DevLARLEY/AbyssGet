@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using AbyssGet.Crypto;
 using AbyssGet.Tls;
 using Jint;
+using PuppeteerSharp;
 
 namespace AbyssGet.Util;
 
@@ -25,7 +26,7 @@ public static class Helpers
         return Encoding.UTF8.GetString(bytes);
     }
     
-    public static async Task<string> RequestPayload(string videoId)
+    public static async Task<string> RequestPayload(string videoId, Logger logger)
     {
         var httpClient = new CustomHttpClient("abysscdn.com");
         var request = new HttpRequestMessage(HttpMethod.Get, videoId.StartsWith("http") ? videoId : $"https://abysscdn.com/?v={videoId}");
@@ -42,107 +43,47 @@ public static class Helpers
 
         var jsCode = scriptMatches.Select(m => m.Groups[1].Value).OrderByDescending(t => t.Length).First();
 
-        var engine = new Engine();
-        engine.SetValue("atob", Atob); // doesn't break when compiling AOT
+        logger.LogInfo("Downloading Chromium...");
+        var browserFetcher = new BrowserFetcher();
+        await browserFetcher.DownloadAsync();
 
-        engine.Execute(@"
-        function decodeCustomBase64(input) {
-          const defaultCharacterSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-          const customCharacterSet = 'RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/=';
-          
-          let standardBase64 = '';
-          for (const ch of input) {
-            const index = customCharacterSet.indexOf(ch);
-            if (index === -1) {
-              continue;
-            }
-            standardBase64 += defaultCharacterSet[index];
-          }
-          
-          const decodedBytes = atob(standardBase64);
-          try {
-            return decodeURIComponent(escape(decodedBytes));
-          } catch {
-            return decodedBytes;
-          }
+        var browser = await Puppeteer.LaunchAsync(new LaunchOptions { Headless = true });
+        var page = await browser.NewPageAsync();
+        await page.GoToAsync("about:blank");
+        
+        const string preCode = @"
+        var output = 'NO_RETURN';
+
+        var top = {location: '.'};
+        var self = {};
+        var isUseExtension = false;
+        var getParameterByName = function() { return false; };
+
+        const customAlphabet = ""RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/="";
+        const standardAlphabet = ""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="";
+
+        function remapBase64(input) {
+            return input.split("""").map(c => {
+            const idx = customAlphabet.indexOf(c);
+            return idx >= 0 ? standardAlphabet[idx] : c;
+            }).join("""");
         }
-        ");
-        engine.Execute("var window = {addEventListener: function(name, func){func()}, atob: decodeCustomBase64};");
-        engine.Execute("var top = {location: '.'}; var self = {};");
-        engine.Execute("var getParameterByName = function(){return false;};");
-        engine.Execute(@"
-            var __dom = {};
 
-            function HTMLElement() {
-              this._innerHTML = '';
-              this._innerText = '';
-              this.id = undefined;
+        window.atob = new Proxy(window.atob, {
+            apply(target, thisArg, args) {
+              let str = args[0];
+              if (str.endsWith(""_"")) {
+                str = str.slice(0, -1);
+                const remapped = remapBase64(str);
+                return target.call(thisArg, remapped);
+              } else {
+                return target.apply(thisArg, args);
+              }
             }
+        });
 
-            HTMLElement.prototype.setAttribute = function() { return 'function'; };
-            HTMLElement.prototype.appendChild = function() { return 'function'; };
-            HTMLElement.prototype.remove = function() {
-              if (this.id && __dom[this.id]) {
-                delete __dom[this.id];
-              }
-            };
-            HTMLElement.prototype.style = {display: ''};
+        document.body.innerHTML = '<div id=""player""><div class=""loader""><span></span></div></div>';
 
-            Object.defineProperty(HTMLElement.prototype, 'innerText', {
-              get: function() {
-                return this._innerText;
-              },
-              set: function(value) {
-                this._innerText = value;
-              },
-              configurable: true
-            });
-
-            Object.defineProperty(HTMLElement.prototype, 'innerHTML', {
-              get: function() {
-                return this._innerHTML;
-              },
-              set: function(value) {
-                this._innerHTML = value;
-              },
-              configurable: true
-            });
-
-            Object.defineProperty(HTMLElement.prototype, 'outerHTML', {
-              get: function() {
-                return '<div>' + this._innerHTML + '</div>';
-              },
-              configurable: true
-            });
-
-            function Document() {}
-            var document = {
-              createElement: function() {
-                return new HTMLElement();
-              },
-              getElementById: function(id) {
-                return __dom[id] || null;
-              },
-              body: {
-                appendChild: function(el) {
-                  if (el.id) {
-                    __dom[el.id] = el;
-                  }
-                }
-              },
-              toString: function() {
-                return '[object HTMLDocument]';
-              },
-              querySelector: function() {
-                return true;
-              }
-            };
-            Object.setPrototypeOf(document, Document.prototype);
-        ");
-        engine.Execute("document.body.appendChild({id: 'player', innerText: '', innerHTML: '', style: ''});");
-        engine.Execute("var isUseExtension = false;");
-        engine.Execute("var output = 'NO_RETURN';");
-        engine.Execute(@"
         window.SoTrym = function(name) {
           return {
             setup: function(config) {
@@ -150,11 +91,16 @@ public static class Helpers
               return this;
             }
           };
-        };        
-        ");
-        engine.Execute(jsCode);
+        };";
+        await page.EvaluateExpressionAsync(preCode);
 
-        return engine.GetValue("output").AsString();
+        await page.EvaluateExpressionAsync(jsCode);
+        await page.EvaluateExpressionAsync("window.dispatchEvent(new Event('load'));");
+
+        var output = await page.EvaluateExpressionAsync<string>("output");
+        await browser.CloseAsync();
+        
+        return output;
     }
 
     public static void MergeFiles(string baseDir, string tempDir, string fileName)

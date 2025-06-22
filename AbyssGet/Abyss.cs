@@ -317,7 +317,7 @@ public class Abyss
             string payload;
             try
             {
-                payload = await Helpers.RequestPayload(videoId);
+                payload = await Helpers.RequestPayload(videoId, _logger);
             }
             catch (Exception ex)
             {
