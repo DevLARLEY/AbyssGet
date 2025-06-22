@@ -307,37 +307,13 @@ public class Abyss
         });
     }
 
-    public async Task DownloadVideosWithPrompt(IEnumerable<string> videoIds)
+    public async Task DownloadVideosWithPrompt(List<string> jsonPayloads)
     {
-        var payloadList = new List<string>();
+        var payloads = jsonPayloads.Select(p => Convert.FromBase64String(p).Decode()).ToList();
 
-        foreach (var videoId in videoIds)
-        {
-            _logger.LogInfo($"Requesting payload for video {videoId}...");
-            string payload;
-            try
-            {
-                payload = await Helpers.RequestPayload(videoId, _logger);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Unable to request payload: {ex.Message}");
-                return;
-            }
-
-            if (payload == "NO_RETURN")
-            {
-                _logger.LogError("Unable to extract payload. Open an issue on GitHub.");
-                return;
-            }
-            
-            _logger.LogDebug($"{videoId} -> {payload}");
-            payloadList.Add(payload);
-        }
-
-        var count = payloadList.Count;
+        var count = payloads.Count;
         _logger.LogInfo($"Getting videos for {count} payload{(count == 1 ? "" : "s")}...");
-        var videoList = Helpers.ExtractVideos(payloadList);
+        var videoList = Helpers.ExtractVideos(payloads);
         
         var prompt = new MultiSelectionPrompt<Video>()
             .UseConverter(video =>

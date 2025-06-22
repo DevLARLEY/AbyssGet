@@ -1,11 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using AbyssGet.Crypto;
-using AbyssGet.Tls;
-using Jint;
-using PuppeteerSharp;
 
 namespace AbyssGet.Util;
 
@@ -20,93 +16,8 @@ public static class Helpers
     };
     private static readonly JsonContext Context = new(Options);
 
-    private static string Atob(string input)
-    {
-        var bytes = Convert.FromBase64String(input);
-        return Encoding.UTF8.GetString(bytes);
-    }
+    public static string Decode(this byte[] data) => Encoding.UTF8.GetString(data);
     
-    public static async Task<string> RequestPayload(string videoId, Logger logger)
-    {
-        var httpClient = new CustomHttpClient("abysscdn.com");
-        var request = new HttpRequestMessage(HttpMethod.Get, videoId.StartsWith("http") ? videoId : $"https://abysscdn.com/?v={videoId}");
-        
-        request.Headers.ConnectionClose = true;
-        request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3");
-        var response = await httpClient.SendAsync(request, TimeSpan.FromSeconds(30));
-        response.EnsureSuccessStatusCode();
-
-        var htmlCode = await response.Content.ReadAsStringAsync();
-
-        var scriptRegex = new Regex("<script>(.*?)</script>");
-        var scriptMatches = scriptRegex.Matches(htmlCode);
-
-        var jsCode = scriptMatches.Select(m => m.Groups[1].Value).OrderByDescending(t => t.Length).First();
-
-        logger.LogInfo("Downloading Chromium...");
-        var browserFetcher = new BrowserFetcher();
-        await browserFetcher.DownloadAsync();
-
-        var browser = await Puppeteer.LaunchAsync(new LaunchOptions { Headless = true });
-        var page = await browser.NewPageAsync();
-        await page.GoToAsync("about:blank");
-        
-        const string preCode = @"
-        var output = 'NO_RETURN';
-
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => false
-        });
-
-        var top = {location: '.'};
-        var self = {};
-        var isUseExtension = false;
-        var getParameterByName = function() { return false; };
-
-        const customAlphabet = ""RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/="";
-        const standardAlphabet = ""ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="";
-
-        function remapBase64(input) {
-            return input.split("""").map(c => {
-            const idx = customAlphabet.indexOf(c);
-            return idx >= 0 ? standardAlphabet[idx] : c;
-            }).join("""");
-        }
-
-        window.atob = new Proxy(window.atob, {
-            apply(target, thisArg, args) {
-              let str = args[0];
-              if (str.endsWith(""_"")) {
-                str = str.slice(0, -1);
-                const remapped = remapBase64(str);
-                return target.call(thisArg, remapped);
-              } else {
-                return target.apply(thisArg, args);
-              }
-            }
-        });
-
-        document.body.innerHTML = '<div id=""player""><div class=""loader""><span></span></div></div>';
-
-        window.SoTrym = function(name) {
-          return {
-            setup: function(config) {
-              output = JSON.stringify(config);
-              return this;
-            }
-          };
-        };";
-        await page.EvaluateExpressionAsync(preCode);
-
-        await page.EvaluateExpressionAsync(jsCode);
-        await page.EvaluateExpressionAsync("window.dispatchEvent(new Event('load'));");
-
-        var output = await page.EvaluateExpressionAsync<string>("output");
-        await browser.CloseAsync();
-        
-        return output;
-    }
-
     public static void MergeFiles(string baseDir, string tempDir, string fileName)
     {
         var downloadDir = Path.Combine(baseDir, tempDir);

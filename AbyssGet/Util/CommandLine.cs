@@ -5,7 +5,7 @@ namespace AbyssGet.Util;
 
 public class CommandLine
 {
-    private static readonly Argument<IEnumerable<string>> VideoIdArguments = new("videoIds", "Video ID `K8R6OOjS7` or Player URL `https://abysscdn.com/?v=K8R6OOjS7`")
+    private static readonly Argument<IEnumerable<string>> VideoIdArguments = new("videoJson", "Video JSON as Base64, e.g.: eyJ3aWR0aCI6IjEwMCUiLCJoZW...SI6Im1wNCJ9XX0=")
     {
         Arity = ArgumentArity.OneOrMore
     };
@@ -22,7 +22,7 @@ public class CommandLine
     
     public static Command GetRootCommand()
     {
-        var rootCommand = new RootCommand("Download one or more videos from abyss.to by either their Video ID or Player URL.")
+        var rootCommand = new RootCommand("Download one or more videos from abyss.to by their video json as base64")
         {
             Handler = CommandHandler.Create<IEnumerable<string>, bool, int, int, LogLevel, int, int, int, bool, string>(HandleCommandAsync)
         };
@@ -42,7 +42,7 @@ public class CommandLine
         return rootCommand;
     }
     
-    private static async Task HandleCommandAsync(IEnumerable<string> videoIds, bool firstUrlOnly, int bestUrlPoolSize, int maxThreads, LogLevel logLevel, int requestTimeout, int blockTimeout, int requestRetries, bool downloadInParallel, string outputDirectory) 
+    private static async Task HandleCommandAsync(IEnumerable<string> videoJson, bool firstUrlOnly, int bestUrlPoolSize, int maxThreads, LogLevel logLevel, int requestTimeout, int blockTimeout, int requestRetries, bool downloadInParallel, string outputDirectory) 
     {
         var settings = new Settings
         {
@@ -58,6 +58,6 @@ public class CommandLine
         };
 
         var abyss = new Abyss(settings);
-        await abyss.DownloadVideosWithPrompt(videoIds);
+        await abyss.DownloadVideosWithPrompt(videoJson.ToList());
     }
 }
