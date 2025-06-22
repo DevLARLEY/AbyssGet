@@ -55,7 +55,7 @@ public static class Helpers
         var output = 'NO_RETURN';
 
         Object.defineProperty(navigator, 'webdriver', {
-          get: () => undefined
+          get: () => false
         });
 
         var top = {location: '.'};
