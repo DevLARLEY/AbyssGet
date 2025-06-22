@@ -54,6 +54,10 @@ public static class Helpers
         const string preCode = @"
         var output = 'NO_RETURN';
 
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => undefined
+        });
+
         var top = {location: '.'};
         var self = {};
         var isUseExtension = false;
