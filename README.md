@@ -3,11 +3,14 @@ C# abyss.to Parallel CLI downloader
 
 # Usage
 ```
+Description:
+  Download one or more videos from abyss.to by their video json as base64
+
 Usage:
-  AbyssGet <videoIds>... [options]
+  AbyssGet <videoJson>... [options]
 
 Arguments:
-  <videoIds>  Video ID `K8R6OOjS7` or Player URL `https://abysscdn.com/?v=K8R6OOjS7`
+  <videoJson>  Video JSON as Base64, e.g.: eyJ3aWR0aCI6IjEwMCUiLCJoZW...SI6Im1wNCJ9XX0=
 
 Options:
   -f, --first-url-only                               Only use the first CDN url [default: False]
