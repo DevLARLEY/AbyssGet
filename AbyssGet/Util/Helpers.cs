@@ -75,6 +75,7 @@ public static class Helpers
 
             function HTMLElement() {
               this._innerHTML = '';
+              this._innerText = '';
               this.id = undefined;
             }
 
@@ -86,6 +87,16 @@ public static class Helpers
               }
             };
             HTMLElement.prototype.style = {display: ''};
+
+            Object.defineProperty(HTMLElement.prototype, 'innerText', {
+              get: function() {
+                return this._innerText;
+              },
+              set: function(value) {
+                this._innerText = value;
+              },
+              configurable: true
+            });
 
             Object.defineProperty(HTMLElement.prototype, 'innerHTML', {
               get: function() {
@@ -120,6 +131,9 @@ public static class Helpers
               },
               toString: function() {
                 return '[object HTMLDocument]';
+              },
+              querySelector: function() {
+                return true;
               }
             };
         ");
