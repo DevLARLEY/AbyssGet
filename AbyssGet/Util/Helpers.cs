@@ -71,12 +71,21 @@ public static class Helpers
         engine.Execute("var top = {location: '.'}; var self = {};");
         engine.Execute("var getParameterByName = function(){return false;};");
         engine.Execute(@"
+            var __dom = {};
+
             function HTMLElement() {
               this._innerHTML = '';
+              this.id = undefined;
             }
+
             HTMLElement.prototype.setAttribute = function() { return 'function'; };
             HTMLElement.prototype.appendChild = function() { return 'function'; };
-            HTMLElement.prototype.style = undefined;
+            HTMLElement.prototype.remove = function() {
+              if (this.id && __dom[this.id]) {
+                delete __dom[this.id];
+              }
+            };
+            HTMLElement.prototype.style = {display: ''};
 
             Object.defineProperty(HTMLElement.prototype, 'innerHTML', {
               get: function() {
@@ -100,10 +109,17 @@ public static class Helpers
                 return new HTMLElement();
               },
               getElementById: function(id) {
-                return id === 'overlay' ? false : {innerHTML: '', innerText: ''};
+                return __dom[id] || null;
+              },
+              body: {
+                appendChild: function(el) {
+                  if (el.id) {
+                    __dom[el.id] = el;
+                  }
+                }
               },
               toString: function() {
-                return '[objectHTMLDocument]';
+                return '[object HTMLDocument]';
               }
             };
         ");
