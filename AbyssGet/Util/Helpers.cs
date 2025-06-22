@@ -123,6 +123,7 @@ public static class Helpers
               }
             };
         ");
+        engine.Execute("document.body.appendChild({id: 'player', innerText: '', innerHTML: ''});");
         engine.Execute("var isUseExtension = false;");
         engine.Execute("var output = 'NO_RETURN';");
         engine.Execute(@"
