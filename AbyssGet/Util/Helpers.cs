@@ -100,7 +100,7 @@ public static class Helpers
                 return new HTMLElement();
               },
               getElementById: function(id) {
-                return id === 'overlay' ? false : {innerHTML: ''};
+                return id === 'overlay' ? false : {innerHTML: '', innerText: ''};
               },
               toString: function() {
                 return '[objectHTMLDocument]';

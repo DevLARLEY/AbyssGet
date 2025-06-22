@@ -324,6 +324,13 @@ public class Abyss
                 _logger.LogError($"Unable to request payload: {ex.Message}");
                 return;
             }
+
+            if (payload == "NO_RETURN")
+            {
+                _logger.LogError("Unable to extract payload. Open an issue on GitHub.");
+                return;
+            }
+            
             _logger.LogDebug($"{videoId} -> {payload}");
             payloadList.Add(payload);
         }
