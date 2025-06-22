@@ -115,6 +115,7 @@ public static class Helpers
               configurable: true
             });
 
+            function Document() {}
             var document = {
               createElement: function() {
                 return new HTMLElement();
@@ -136,6 +137,7 @@ public static class Helpers
                 return true;
               }
             };
+            Object.setPrototypeOf(document, Document.prototype);
         ");
         engine.Execute("document.body.appendChild({id: 'player', innerText: '', innerHTML: '', style: ''});");
         engine.Execute("var isUseExtension = false;");
